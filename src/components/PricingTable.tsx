@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { models } from '../data/models';
-import type { Model } from '../../types';
+import { models } from '../../data/models';
+import type { Model } from '../types';
 
 // Props interface for the component
 export interface PricingTableProps {
