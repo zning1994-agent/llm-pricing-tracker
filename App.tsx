@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, createContext, useContext } from 'react';
 import { PricingTable, PricingPlan } from './components/PricingTable';
-import { BenchmarkChart, BenchmarkScore, BenchmarkType } from './components/BenchmarkChart';
+import { BenchmarkChart, BenchmarkScore } from './components/BenchmarkChart';
 import { CapabilityMatrix, ModelCapability } from './components/CapabilityMatrix';
 import './App.css';
 
@@ -104,7 +104,7 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
 // Header Component
 const Header: React.FC = () => {
-  const { state, setViewMode, refresh } = useAppContext();
+  const { state, refresh } = useAppContext();
 
   const formatLastRefreshed = () => {
     if (!state.lastRefreshed) return 'Never';
@@ -181,7 +181,7 @@ const Navigation: React.FC = () => {
 // Selected Model Panel
 const SelectedModelPanel: React.FC = () => {
   const { state, selectModel } = useAppContext();
-  const [pricingData, setPricingData] = useState<PricingPlan[]>([
+  const [pricingData] = useState<PricingPlan[]>([
     { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', model: 'gpt-4-turbo-2024-04-09', inputPrice: 10, outputPrice: 30, contextWindow: 128000, isPopular: true },
     { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic', model: 'claude-3-opus-20240229', inputPrice: 15, outputPrice: 75, contextWindow: 200000, isPopular: true },
     { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', model: 'gemini-1.5-pro-preview-0514', inputPrice: 3.5, outputPrice: 10.5, contextWindow: 1000000, isPopular: true },
