@@ -19,7 +19,8 @@ export interface PricingTableProps {
   onSelectPlan?: (plan: PricingPlan) => void;
   showContextWindow?: boolean;
   showFeatures?: boolean;
-  highlightLowest?: 'input' | 'output' | 'both' | null;
+  showTotalCost?: boolean;
+  highlightLowest?: 'input' | 'output' | 'total' | 'both' | null;
   title?: string;
   subtitle?: string;
 }
@@ -98,6 +99,7 @@ export const PricingTable: React.FC<PricingTableProps> = ({
   onSelectPlan,
   showContextWindow = true,
   showFeatures = true,
+  showTotalCost = true,
   highlightLowest = 'both',
   title = 'LLM Token Pricing Comparison',
   subtitle = 'Compare pricing across different LLM providers',
@@ -106,6 +108,8 @@ export const PricingTable: React.FC<PricingTableProps> = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [filterProvider, setFilterProvider] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  type SortKey = 'inputPrice' | 'outputPrice' | 'contextWindow' | 'name' | 'totalCost';
 
   const providers = useMemo(() => {
     const uniqueProviders = [...new Set(plans.map((p) => p.provider))];
@@ -148,6 +152,11 @@ export const PricingTable: React.FC<PricingTableProps> = ({
         case 'contextWindow':
           aVal = a.contextWindow;
           bVal = b.contextWindow;
+          break;
+        case 'totalCost':
+          // Calculate total cost assuming 50% input, 50% output tokens
+          aVal = (a.inputPrice + a.outputPrice) / 2;
+          bVal = (b.inputPrice + b.outputPrice) / 2;
           break;
         case 'name':
           aVal = a.name;
@@ -277,6 +286,17 @@ export const PricingTable: React.FC<PricingTableProps> = ({
                   <SortIcon active={sortKey === 'outputPrice'} direction={sortDirection} />
                 </button>
               </th>
+              {showTotalCost && (
+                <th>
+                  <button
+                    className={`sort-button ${sortKey === 'totalCost' ? 'active' : ''}`}
+                    onClick={() => handleSort('totalCost')}
+                  >
+                    Total Cost / 1M{' '}
+                    <SortIcon active={sortKey === 'totalCost'} direction={sortDirection} />
+                  </button>
+                </th>
+              )}
               {showContextWindow && (
                 <th>
                   <button
@@ -333,6 +353,13 @@ export const PricingTable: React.FC<PricingTableProps> = ({
                       {formatPrice(plan.outputPrice * 1000000, plan.currency)}
                     </span>
                   </td>
+                  {showTotalCost && (
+                    <td>
+                      <span className="price-value total-cost">
+                        {formatPrice(((plan.inputPrice + plan.outputPrice) / 2) * 1000000, plan.currency)}
+                      </span>
+                    </td>
+                  )}
                   {showContextWindow && (
                     <td>
                       <span className="context-window">{formatContextWindow(plan.contextWindow)}</span>

@@ -338,6 +338,16 @@
   color: var(--text-primary);
 }
 
+/* Total Cost Column */
+.price-value.total-cost {
+  color: var(--primary-color);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* Context Window */
 .context-window {
   display: inline-block;
