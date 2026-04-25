@@ -8,6 +8,7 @@ export interface ModelCapability {
   modelId: string;
   modelName: string;
   provider: string;
+  contextLength?: number; // Numeric context window in tokens
   vision?: CapabilityLevel;
   audio?: CapabilityLevel;
   functionCalling?: CapabilityLevel;
@@ -24,6 +25,12 @@ export interface ModelCapability {
   fineTuning?: CapabilityLevel;
   embedding?: CapabilityLevel;
 }
+
+// Features that should display as checkmarks/X marks
+export const BOOLEAN_FEATURES = ['vision', 'streaming', 'toolUse', 'functionCalling', 'multiModal'] as const;
+
+// Features that should display as numeric values
+export const NUMERIC_FEATURES = ['contextLength'] as const;
 
 export interface CapabilityCategory {
   id: string;
@@ -44,6 +51,11 @@ export interface CapabilityMatrixProps {
 
 // Default capability categories
 const DEFAULT_CATEGORIES: CapabilityCategory[] = [
+  {
+    id: 'core',
+    name: 'Core Features',
+    capabilities: ['contextLength', 'vision', 'streaming'],
+  },
   {
     id: 'multimodal',
     name: 'Multimodal',
@@ -68,6 +80,7 @@ const DEFAULT_CATEGORIES: CapabilityCategory[] = [
 
 // Capability labels
 const CAPABILITY_LABELS: Record<string, string> = {
+  contextLength: 'Context Length',
   vision: 'Vision (Images)',
   audio: 'Audio Processing',
   functionCalling: 'Function Calling',
@@ -322,14 +335,51 @@ export const CapabilityMatrix: React.FC<CapabilityMatrixProps> = ({
     return 'Not Supported';
   };
 
-  const CapabilityCell: React.FC<{ level: CapabilityLevel }> = ({ level }) => (
-    <td className={`capability-cell ${getCapabilityClass(level)}`}>
-      <span className="capability-icon" title={getCapabilityLabel(level)}>
-        {getCapabilityIcon(level)}
-      </span>
-      {!compactView && <span className="capability-text">{getCapabilityLabel(level)}</span>}
-    </td>
-  );
+  const formatContextLength = (tokens: number): string => {
+    if (tokens >= 1000000) {
+      return `${(tokens / 1000000).toFixed(1)}M`;
+    }
+    if (tokens >= 1000) {
+      return `${(tokens / 1000).toFixed(0)}K`;
+    }
+    return tokens.toString();
+  };
+
+  const CapabilityCell: React.FC<{ capability: string; level: CapabilityLevel | number }> = ({ capability, level }) => {
+    // Handle numeric context length
+    if (capability === 'contextLength' && typeof level === 'number') {
+      return (
+        <td className="capability-cell numeric-cell">
+          <span className="context-length-value" title={`${level.toLocaleString()} tokens`}>
+            {formatContextLength(level)}
+          </span>
+        </td>
+      );
+    }
+
+    // Handle boolean features with checkmarks/X marks
+    if (BOOLEAN_FEATURES.includes(capability as typeof BOOLEAN_FEATURES[number])) {
+      const isSupported = level === true || level === 'full' || level === 'partial';
+      return (
+        <td className={`capability-cell boolean-cell ${isSupported ? 'supported' : 'not-supported'}`}>
+          <span className="boolean-icon" title={isSupported ? 'Supported' : 'Not Supported'}>
+            {isSupported ? '✓' : '✕'}
+          </span>
+        </td>
+      );
+    }
+
+    // Handle level-based capabilities
+    const levelValue = level as CapabilityLevel;
+    return (
+      <td className={`capability-cell ${getCapabilityClass(levelValue)}`}>
+        <span className="capability-icon" title={getCapabilityLabel(levelValue)}>
+          {getCapabilityIcon(levelValue)}
+        </span>
+        {!compactView && <span className="capability-text">{getCapabilityLabel(levelValue)}</span>}
+      </td>
+    );
+  };
 
   return (
     <div className="capability-matrix-container">
@@ -401,7 +451,8 @@ export const CapabilityMatrix: React.FC<CapabilityMatrixProps> = ({
                 {allCapabilities.map((cap) => (
                   <CapabilityCell
                     key={cap}
-                    level={model[cap as keyof ModelCapability] as CapabilityLevel}
+                    capability={cap}
+                    level={model[cap as keyof ModelCapability] as CapabilityLevel | number}
                   />
                 ))}
                 {highlightCounts && (

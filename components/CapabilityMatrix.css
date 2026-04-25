@@ -241,6 +241,58 @@
   opacity: 0.6;
 }
 
+/* Context Length Numeric Cell */
+.capability-cell.numeric-cell {
+  min-width: 80px;
+}
+
+.context-length-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  color: var(--primary-color);
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+/* Boolean Cell (Checkmarks/X marks) */
+.capability-cell.boolean-cell {
+  min-width: 60px;
+}
+
+.boolean-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.boolean-cell.supported .boolean-icon {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--success-color);
+}
+
+.boolean-cell.not-supported .boolean-icon {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+  opacity: 0.5;
+}
+
+.capability-cell.compact .boolean-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 0.75rem;
+}
+
 /* Score Cell */
 .score-cell {
   padding: 0.5rem;
@@ -324,6 +376,30 @@
 .legend-label {
   font-size: 0.8125rem;
   color: var(--text-secondary);
+}
+
+/* Context Length Legend */
+.legend-item.context-length .legend-icon {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--primary-color);
+  font-size: 0.625rem;
+}
+
+/* Boolean Legend */
+.legend-item.boolean .legend-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 0.875rem;
+}
+
+.legend-item.boolean.supported .legend-icon {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--success-color);
+}
+
+.legend-item.boolean.not-supported .legend-icon {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
 }
 
 /* Category Description */
