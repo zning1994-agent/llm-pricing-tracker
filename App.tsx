@@ -1,7 +1,7 @@
 import React, { useReducer, useCallback, useMemo, createContext, useContext } from 'react';
-import { PricingTable, PricingPlan } from './components/PricingTable';
-import { BenchmarkChart, BenchmarkScore } from './components/BenchmarkChart';
-import { CapabilityMatrix, ModelCapability } from './components/CapabilityMatrix';
+import { PricingTable, PricingPlan } from './src/components/PricingTable';
+import { BenchmarkChart, BenchmarkScore } from './src/components/BenchmarkChart';
+import { CapabilityMatrix, ModelCapability } from './src/components/CapabilityMatrix';
 import './App.css';
 
 // Types
