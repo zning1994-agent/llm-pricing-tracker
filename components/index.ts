@@ -13,3 +13,6 @@ export type { BenchmarkChartProps, BenchmarkScore, BenchmarkType } from '../src/
 
 export { default as CapabilityMatrix, CapabilityMatrix as CapabilityMatrixComponent } from '../src/components/CapabilityMatrix';
 export type { CapabilityMatrixProps, ModelCapability, CapabilityCategory, CapabilityLevel } from '../src/components/CapabilityMatrix';
+
+export { default as RefreshButton, RefreshButton as RefreshButtonComponent } from './RefreshButton';
+export type { RefreshButtonProps } from './RefreshButton';
