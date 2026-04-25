@@ -1,13 +1,13 @@
 // TypeScript interfaces for LLM Pricing Tracker
 
-// Pricing structure
-export interface Pricing {
+// Pricing information
+export interface PricingInfo {
   inputPerMillion: number; // Cost per million input tokens
   outputPerMillion: number; // Cost per million output tokens
 }
 
 // Benchmark scores
-export interface Benchmarks {
+export interface BenchmarkScores {
   mmlu: number; // Massive Multitask Language Understanding (%)
   humanEval: number; // HumanEval code completion (%)
   math: number; // MATH problem solving (%)
@@ -30,8 +30,8 @@ export interface Model {
   provider: string;
   description: string;
   releaseDate: string; // ISO date string
-  pricing: Pricing;
-  benchmarks: Benchmarks;
+  pricing: PricingInfo;
+  benchmarks: BenchmarkScores;
   capabilities: Capabilities;
 }
 
