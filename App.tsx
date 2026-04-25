@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, createContext, useContext } from 'react';
+import React, { useReducer, useCallback, useMemo, createContext, useContext } from 'react';
 import { PricingTable, PricingPlan } from './components/PricingTable';
 import { BenchmarkChart, BenchmarkScore } from './components/BenchmarkChart';
 import { CapabilityMatrix, ModelCapability } from './components/CapabilityMatrix';
@@ -14,6 +14,36 @@ interface AppState {
   refreshState: RefreshState;
   selectedModel: string | null;
   error: string | null;
+}
+
+type AppAction =
+  | { type: 'SET_VIEW_MODE'; payload: ViewMode }
+  | { type: 'SET_REFRESH_STATE'; payload: RefreshState }
+  | { type: 'REFRESH_SUCCESS' }
+  | { type: 'REFRESH_ERROR'; payload: string }
+  | { type: 'SELECT_MODEL'; payload: string | null }
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'RESET_TO_IDLE' };
+
+function appReducer(state: AppState, action: AppAction): AppState {
+  switch (action.type) {
+    case 'SET_VIEW_MODE':
+      return { ...state, viewMode: action.payload };
+    case 'SET_REFRESH_STATE':
+      return { ...state, refreshState: action.payload, error: null };
+    case 'REFRESH_SUCCESS':
+      return { ...state, refreshState: 'success', lastRefreshed: new Date() };
+    case 'REFRESH_ERROR':
+      return { ...state, refreshState: 'error', error: action.payload };
+    case 'SELECT_MODEL':
+      return { ...state, selectedModel: action.payload };
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
+    case 'RESET_TO_IDLE':
+      return { ...state, refreshState: 'idle' };
+    default:
+      return state;
+  }
 }
 
 interface AppContextType {
@@ -41,7 +71,7 @@ interface AppProviderProps {
 }
 
 const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [state, setState] = useState<AppState>({
+  const [state, dispatch] = useReducer(appReducer, {
     viewMode: 'all',
     lastRefreshed: null,
     refreshState: 'idle',
@@ -50,41 +80,30 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   });
 
   const setViewMode = useCallback((mode: ViewMode) => {
-    setState((prev) => ({ ...prev, viewMode: mode }));
+    dispatch({ type: 'SET_VIEW_MODE', payload: mode });
   }, []);
 
   const selectModel = useCallback((modelId: string | null) => {
-    setState((prev) => ({ ...prev, selectedModel: modelId }));
+    dispatch({ type: 'SELECT_MODEL', payload: modelId });
   }, []);
 
   const clearError = useCallback(() => {
-    setState((prev) => ({ ...prev, error: null }));
+    dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
   const refresh = useCallback(async () => {
-    setState((prev) => ({ ...prev, refreshState: 'refreshing', error: null }));
+    dispatch({ type: 'SET_REFRESH_STATE', payload: 'refreshing' });
 
     try {
-      // Simulate data refresh with delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // In production, this would fetch fresh data from APIs
-      setState((prev) => ({
-        ...prev,
-        refreshState: 'success',
-        lastRefreshed: new Date(),
-      }));
+      dispatch({ type: 'REFRESH_SUCCESS' });
 
-      // Reset to idle after showing success
       setTimeout(() => {
-        setState((prev) => ({ ...prev, refreshState: 'idle' }));
+        dispatch({ type: 'RESET_TO_IDLE' });
       }, 2000);
-    } catch (error) {
-      setState((prev) => ({
-        ...prev,
-        refreshState: 'error',
-        error: error instanceof Error ? error.message : 'Failed to refresh data',
-      }));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh data';
+      dispatch({ type: 'REFRESH_ERROR', payload: errorMessage });
     }
   }, []);
 
@@ -181,21 +200,24 @@ const Navigation: React.FC = () => {
 // Selected Model Panel
 const SelectedModelPanel: React.FC = () => {
   const { state, selectModel } = useAppContext();
-  const [pricingData] = useState<PricingPlan[]>([
+
+  const pricingData: PricingPlan[] = [
     { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', model: 'gpt-4-turbo-2024-04-09', inputPrice: 10, outputPrice: 30, contextWindow: 128000, isPopular: true },
     { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic', model: 'claude-3-opus-20240229', inputPrice: 15, outputPrice: 75, contextWindow: 200000, isPopular: true },
     { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', model: 'gemini-1.5-pro-preview-0514', inputPrice: 3.5, outputPrice: 10.5, contextWindow: 1000000, isPopular: true },
-  ]);
-  const [benchmarkData] = useState<BenchmarkScore[]>([
+  ];
+
+  const benchmarkData: BenchmarkScore[] = [
     { modelId: 'gpt-4-turbo', modelName: 'GPT-4 Turbo', provider: 'OpenAI', mmlu: 86.4, humaneval: 90.2, math: 73.4, mgsm: 79.8 },
     { modelId: 'claude-3-opus', modelName: 'Claude 3 Opus', provider: 'Anthropic', mmlu: 88.7, humaneval: 84.0, math: 60.1, mgsm: 83.6 },
     { modelId: 'gemini-1.5-pro', modelName: 'Gemini 1.5 Pro', provider: 'Google', mmlu: 85.9, humaneval: 84.6, math: 58.5, mgsm: 79.4 },
-  ]);
-  const [capabilityData] = useState<ModelCapability[]>([
+  ];
+
+  const capabilityData: ModelCapability[] = [
     { modelId: 'gpt-4-turbo', modelName: 'GPT-4 Turbo', provider: 'OpenAI', vision: 'full', functionCalling: 'full', jsonMode: 'full', streaming: 'full', multiModal: 'partial' },
     { modelId: 'claude-3-opus', modelName: 'Claude 3 Opus', provider: 'Anthropic', vision: 'full', functionCalling: 'full', jsonMode: 'full', streaming: 'full', multiModal: 'partial' },
     { modelId: 'gemini-1.5-pro', modelName: 'Gemini 1.5 Pro', provider: 'Google', vision: 'full', functionCalling: 'full', jsonMode: 'full', streaming: 'full', multiModal: 'full' },
-  ]);
+  ];
 
   const selectedPricing = pricingData.find((p) => p.id === state.selectedModel);
   const selectedBenchmark = benchmarkData.find((b) => b.modelId === state.selectedModel);
@@ -265,9 +287,8 @@ const ErrorToast: React.FC = () => {
 
 // Main App Component
 const App: React.FC = () => {
-  const { state } = useAppContext();
+  const { state, selectModel } = useAppContext();
 
-  // Sample data for components
   const pricingPlans: PricingPlan[] = [
     { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', model: 'gpt-4-turbo-2024-04-09', inputPrice: 10, outputPrice: 30, contextWindow: 128000, features: ['Vision', 'JSON Mode', 'Function Calling'], isPopular: true },
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI', model: 'gpt-3.5-turbo-0125', inputPrice: 0.5, outputPrice: 1.5, contextWindow: 16385, features: ['Fast', 'Cost-effective'] },
@@ -297,52 +318,17 @@ const App: React.FC = () => {
     { modelId: 'llama-3-70b', modelName: 'Llama 3 70B', provider: 'Meta', vision: 'none', audio: 'none', functionCalling: 'full', jsonMode: 'full', streaming: 'full', systemPrompt: 'full', multiModal: 'none', codeExecution: 'limited', toolUse: 'partial', retrieval: 'partial', contextArchival: 'limited', guardrails: 'partial', customWeights: 'full', fineTuning: 'full', embedding: 'full' },
   ];
 
-  const handleModelSelect = useCallback((plan: PricingPlan | BenchmarkScore | ModelCapability) => {
-    console.log('Selected model:', plan);
-  }, []);
+  const handlePricingSelect = useCallback((plan: PricingPlan) => {
+    selectModel(plan.id);
+  }, [selectModel]);
 
-  const renderContent = () => {
-    if (state.viewMode === 'pricing' || state.viewMode === 'all') {
-      return (
-        <section className="app-section">
-          <PricingTable
-            plans={pricingPlans}
-            onSelectPlan={handleModelSelect}
-            title={state.viewMode === 'all' ? 'Token Pricing Comparison' : undefined}
-            highlightLowest="both"
-          />
-        </section>
-      );
-    }
+  const handleBenchmarkSelect = useCallback((model: BenchmarkScore) => {
+    selectModel(model.modelId);
+  }, [selectModel]);
 
-    if (state.viewMode === 'benchmark') {
-      return (
-        <section className="app-section">
-          <BenchmarkChart
-            data={benchmarkScores}
-            title="LLM Benchmark Performance"
-            highlightBest={true}
-            highlightWorst={true}
-            onModelClick={handleModelSelect}
-          />
-        </section>
-      );
-    }
-
-    if (state.viewMode === 'capability') {
-      return (
-        <section className="app-section">
-          <CapabilityMatrix
-            models={modelCapabilities}
-            title="LLM Capability Comparison"
-            onModelClick={handleModelSelect}
-          />
-        </section>
-      );
-    }
-
-    return null;
-  };
+  const handleCapabilitySelect = useCallback((model: ModelCapability) => {
+    selectModel(model.modelId);
+  }, [selectModel]);
 
   return (
     <div className="app">
@@ -354,7 +340,7 @@ const App: React.FC = () => {
             <section className="app-section">
               <PricingTable
                 plans={pricingPlans}
-                onSelectPlan={handleModelSelect}
+                onSelectPlan={handlePricingSelect}
                 title="Token Pricing Comparison"
                 highlightLowest="both"
               />
@@ -365,19 +351,48 @@ const App: React.FC = () => {
                 title="LLM Benchmark Performance"
                 highlightBest={true}
                 highlightWorst={true}
-                onModelClick={handleModelSelect}
+                onModelClick={handleBenchmarkSelect}
               />
             </section>
             <section className="app-section">
               <CapabilityMatrix
                 models={modelCapabilities}
                 title="LLM Capability Comparison"
-                onModelClick={handleModelSelect}
+                onModelClick={handleCapabilitySelect}
               />
             </section>
           </div>
         )}
-        {state.viewMode !== 'all' && renderContent()}
+        {state.viewMode === 'pricing' && (
+          <section className="app-section">
+            <PricingTable
+              plans={pricingPlans}
+              onSelectPlan={handlePricingSelect}
+              title="Token Pricing Comparison"
+              highlightLowest="both"
+            />
+          </section>
+        )}
+        {state.viewMode === 'benchmark' && (
+          <section className="app-section">
+            <BenchmarkChart
+              data={benchmarkScores}
+              title="LLM Benchmark Performance"
+              highlightBest={true}
+              highlightWorst={true}
+              onModelClick={handleBenchmarkSelect}
+            />
+          </section>
+        )}
+        {state.viewMode === 'capability' && (
+          <section className="app-section">
+            <CapabilityMatrix
+              models={modelCapabilities}
+              title="LLM Capability Comparison"
+              onModelClick={handleCapabilitySelect}
+            />
+          </section>
+        )}
       </main>
       <SelectedModelPanel />
       <ErrorToast />
