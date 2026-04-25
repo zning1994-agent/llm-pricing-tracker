@@ -438,6 +438,12 @@
       <div id="benchmark-root"></div>
     </div>
 
+    <!-- Capability Matrix Section -->
+    <div class="demo-section">
+      <h2 class="section-title">Capability Comparison</h2>
+      <div id="capability-root"></div>
+    </div>
+
     <!-- Pricing Table Section -->
     <div class="demo-section">
       <h2 class="section-title">Token Pricing</h2>
@@ -740,12 +746,159 @@
       );
     }
 
+    // Capability Matrix Component
+    const CAPABILITY_LABELS = {
+      vision: 'Vision',
+      audio: 'Audio',
+      functionCalling: 'Function Calling',
+      jsonMode: 'JSON Mode',
+      streaming: 'Streaming',
+      systemPrompt: 'System Prompts',
+      multiModal: 'Multimodal',
+      codeExecution: 'Code Exec',
+      toolUse: 'Tool Use',
+      retrieval: 'Retrieval',
+      contextArchival: 'Context',
+      guardrails: 'Guardrails',
+      fineTuning: 'Fine-tuning',
+      embedding: 'Embeddings',
+    };
+
+    const capabilityData = [
+      { modelId: 'gpt-4-turbo', modelName: 'GPT-4 Turbo', provider: 'OpenAI', vision: 'full', audio: 'none', functionCalling: 'full', jsonMode: 'full', streaming: 'full', systemPrompt: 'full', multiModal: 'partial', codeExecution: 'limited', toolUse: 'full', retrieval: 'full', contextArchival: 'limited', guardrails: 'full', fineTuning: 'none', embedding: 'partial' },
+      { modelId: 'claude-3-opus', modelName: 'Claude 3 Opus', provider: 'Anthropic', vision: 'full', audio: 'none', functionCalling: 'full', jsonMode: 'full', streaming: 'full', systemPrompt: 'full', multiModal: 'partial', codeExecution: 'none', toolUse: 'full', retrieval: 'partial', contextArchival: 'full', guardrails: 'full', fineTuning: 'none', embedding: 'none' },
+      { modelId: 'gemini-1.5-pro', modelName: 'Gemini 1.5 Pro', provider: 'Google', vision: 'full', audio: 'full', functionCalling: 'full', jsonMode: 'full', streaming: 'full', systemPrompt: 'full', multiModal: 'full', codeExecution: 'limited', toolUse: 'full', retrieval: 'full', contextArchival: 'full', guardrails: 'partial', fineTuning: 'limited', embedding: 'partial' },
+      { modelId: 'mistral-large', modelName: 'Mistral Large', provider: 'Mistral', vision: 'none', audio: 'none', functionCalling: 'full', jsonMode: 'full', streaming: 'full', systemPrompt: 'full', multiModal: 'none', codeExecution: 'none', toolUse: 'full', retrieval: 'partial', contextArchival: 'partial', guardrails: 'partial', fineTuning: 'full', embedding: 'full' },
+      { modelId: 'llama-3-70b', modelName: 'Llama 3 70B', provider: 'Meta', vision: 'none', audio: 'none', functionCalling: 'full', jsonMode: 'full', streaming: 'full', systemPrompt: 'full', multiModal: 'none', codeExecution: 'limited', toolUse: 'partial', retrieval: 'partial', contextArchival: 'limited', guardrails: 'partial', fineTuning: 'full', embedding: 'full' },
+    ];
+
+    const categories = [
+      { id: 'all', name: 'All Features' },
+      { id: 'multimodal', name: 'Multimodal' },
+      { id: 'advanced', name: 'Advanced' },
+      { id: 'context', name: 'Context' },
+      { id: 'custom', name: 'Customization' },
+    ];
+
+    const categoryCapabilities = {
+      multimodal: ['vision', 'audio', 'multiModal'],
+      advanced: ['functionCalling', 'jsonMode', 'codeExecution', 'toolUse'],
+      context: ['streaming', 'systemPrompt', 'contextArchival', 'retrieval'],
+      custom: ['fineTuning', 'embedding', 'guardrails'],
+    };
+
+    function CapabilityMatrix() {
+      const [selectedCategory, setSelectedCategory] = useState('all');
+
+      const allCapabilities = selectedCategory === 'all' 
+        ? ['vision', 'audio', 'functionCalling', 'jsonMode', 'streaming', 'systemPrompt', 'multiModal', 'codeExecution', 'toolUse', 'retrieval', 'contextArchival', 'guardrails', 'fineTuning', 'embedding']
+        : (categoryCapabilities[selectedCategory] || []);
+
+      const getCapabilityClass = (level) => {
+        if (level === 'full') return 'capability-full';
+        if (level === 'partial') return 'capability-partial';
+        if (level === 'limited') return 'capability-limited';
+        return 'capability-none';
+      };
+
+      const getCapabilityIcon = (level) => {
+        if (level === 'full') return '✓';
+        if (level === 'partial') return '◐';
+        if (level === 'limited') return '◑';
+        return '✕';
+      };
+
+      const sortedModels = useMemo(() => {
+        return [...capabilityData].sort((a, b) => {
+          const aFull = allCapabilities.filter(cap => a[cap] === 'full').length;
+          const bFull = allCapabilities.filter(cap => b[cap] === 'full').length;
+          return bFull - aFull;
+        });
+      }, [allCapabilities]);
+
+      return (
+        <div className="card-container">
+          <div className="card-header">
+            <h2 className="card-title">Capability Comparison</h2>
+            <p className="card-subtitle">Compare features across different LLM providers</p>
+            <div className="filter-chips">
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  className={`filter-chip ${selectedCategory === cat.id ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  style={{ '--chip-color': '#3b82f6' }}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                  <th style={{ padding: '0.75rem 0.5rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', color: '#475569' }}>Model</th>
+                  {allCapabilities.map(cap => (
+                    <th key={cap} style={{ padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', color: '#475569' }}>
+                      {CAPABILITY_LABELS[cap]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sortedModels.map(model => (
+                  <tr key={model.modelId} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '0.75rem 0.5rem', textAlign: 'left' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+                        <strong style={{ fontSize: '0.875rem' }}>{model.modelName}</strong>
+                        <span style={{ fontSize: '0.6875rem', color: PROVIDER_COLORS[model.provider] }}>{model.provider}</span>
+                      </div>
+                    </td>
+                    {allCapabilities.map(cap => (
+                      <td key={cap} style={{ padding: '0.5rem', textAlign: 'center' }}>
+                        <span className={getCapabilityClass(model[cap])} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: '50%', fontSize: '0.875rem', fontWeight: 700 }}>
+                          {getCapabilityIcon(model[cap])}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="capability-legend" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'center', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', marginTop: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="capability-full" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700 }}>✓</span>
+              <span style={{ fontSize: '0.8125rem', color: '#475569' }}>Full Support</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="capability-partial" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700 }}>◐</span>
+              <span style={{ fontSize: '0.8125rem', color: '#475569' }}>Partial</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="capability-limited" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700 }}>◑</span>
+              <span style={{ fontSize: '0.8125rem', color: '#475569' }}>Limited</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="capability-none" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: '50%', fontSize: '0.75rem', fontWeight: 700 }}>✕</span>
+              <span style={{ fontSize: '0.8125rem', color: '#475569' }}>Not Supported</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Render Components
     const benchmarkRoot = document.getElementById('benchmark-root');
     const pricingRoot = document.getElementById('pricing-root');
+    const capabilityRoot = document.getElementById('capability-root');
 
     if (benchmarkRoot) ReactDOM.createRoot(benchmarkRoot).render(<BenchmarkChart />);
     if (pricingRoot) ReactDOM.createRoot(pricingRoot).render(<PricingTable />);
+    if (capabilityRoot) ReactDOM.createRoot(capabilityRoot).render(<CapabilityMatrix />);
   </script>
 </body>
 </html>
