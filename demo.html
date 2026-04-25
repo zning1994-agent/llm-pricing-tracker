@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM Pricing Table - Demo</title>
+  <title>LLM Pricing & Benchmark Tracker - Demo</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -41,6 +45,18 @@
       font-size: 1.125rem;
     }
 
+    .demo-section {
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
     .demo-controls {
       display: flex;
       flex-wrap: wrap;
@@ -72,7 +88,8 @@
       color: white;
     }
 
-    .pricing-table-container {
+    /* Shared Component Styles */
+    .card-container {
       --primary-color: #3b82f6;
       --primary-hover: #2563eb;
       --secondary-color: #64748b;
@@ -101,448 +118,302 @@
       box-shadow: var(--shadow-lg);
     }
 
-    .pricing-table-header {
+    .card-header {
       display: flex;
       flex-direction: column;
-      gap: 1.5rem;
+      gap: 1rem;
       margin-bottom: 1.5rem;
       padding-bottom: 1.5rem;
       border-bottom: 1px solid var(--border-color);
     }
 
-    .header-text {
-      text-align: center;
-    }
-
-    .pricing-table-title {
-      font-size: 1.875rem;
+    .card-title {
+      font-size: 1.5rem;
       font-weight: 700;
-      margin: 0 0 0.5rem 0;
+      margin: 0;
       background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .pricing-table-subtitle {
-      font-size: 1rem;
+    .card-subtitle {
+      font-size: 0.875rem;
       color: var(--text-secondary);
       margin: 0;
     }
 
-    .pricing-table-controls {
+    /* Filter Chips */
+    .filter-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: 0.5rem;
       justify-content: center;
+    }
+
+    .filter-chip {
+      display: flex;
       align-items: center;
-    }
-
-    .search-box {
-      position: relative;
-      width: 100%;
-      max-width: 280px;
-    }
-
-    .search-input {
-      width: 100%;
-      padding: 0.625rem 1rem;
-      padding-left: 2.5rem;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
       font-size: 0.875rem;
-      border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
+      font-weight: 500;
+      color: var(--text-secondary);
       background-color: var(--bg-secondary);
-      color: var(--text-primary);
-      transition: all 0.2s ease;
-    }
-
-    .search-input:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      background-color: var(--bg-primary);
-    }
-
-    .search-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .search-box::before {
-      content: '🔍';
-      position: absolute;
-      left: 0.875rem;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 0.875rem;
-      opacity: 0.5;
-    }
-
-    .filter-dropdown {
-      position: relative;
-    }
-
-    .provider-select {
-      padding: 0.625rem 2.5rem 0.625rem 1rem;
-      font-size: 0.875rem;
       border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
-      background-color: var(--bg-primary);
-      color: var(--text-primary);
+      border-radius: 9999px;
       cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.875rem center;
       transition: all 0.2s ease;
     }
 
-    .provider-select:focus {
-      outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    .filter-chip:hover {
+      background-color: var(--bg-tertiary);
     }
 
-    .pricing-table-wrapper {
+    .filter-chip.active {
+      color: var(--chip-color, var(--primary-color));
+      background-color: rgba(59, 130, 246, 0.1);
+      border-color: var(--chip-color, var(--primary-color));
+    }
+
+    .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Table Styles */
+    .table-wrapper {
       overflow-x: auto;
       border-radius: 0.75rem;
       border: 1px solid var(--border-color);
     }
 
-    .pricing-table {
+    .data-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 800px;
+      min-width: 600px;
     }
 
-    .pricing-table thead {
-      background-color: var(--bg-tertiary);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    .pricing-table th {
-      padding: 1rem;
-      text-align: left;
+    .data-table th {
+      padding: 0.75rem 1rem;
       font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-secondary);
+      background-color: var(--bg-tertiary);
+      text-align: left;
       border-bottom: 2px solid var(--border-color);
     }
 
-    .pricing-table td {
-      padding: 1rem;
+    .data-table td {
+      padding: 0.75rem 1rem;
       border-bottom: 1px solid var(--border-color);
-      vertical-align: top;
+      font-size: 0.875rem;
     }
 
-    .pricing-table tbody tr {
-      transition: all 0.15s ease;
-      cursor: pointer;
+    .data-table tbody tr {
+      transition: background-color 0.15s ease;
     }
 
-    .pricing-table tbody tr:hover {
+    .data-table tbody tr:hover {
       background-color: var(--bg-secondary);
     }
 
-    .pricing-table tbody tr:last-child td {
+    .data-table tbody tr:last-child td {
       border-bottom: none;
     }
 
-    .sticky-col {
-      position: sticky;
-      left: 0;
-      background-color: inherit;
-      z-index: 1;
-    }
-
-    .pricing-table thead .sticky-col {
-      background-color: var(--bg-tertiary);
-    }
-
-    .pricing-table tbody tr:hover .sticky-col {
-      background-color: var(--bg-secondary);
-    }
-
-    .pricing-table tbody tr.popular {
-      background-color: rgba(59, 130, 246, 0.03);
-    }
-
-    .pricing-table tbody tr.popular:hover {
-      background-color: rgba(59, 130, 246, 0.06);
-    }
-
-    .price-value.lowest {
-      color: var(--success-color);
-      font-weight: 700;
-    }
-
-    .price-value.lowest::before {
-      content: '💰 ';
-      font-size: 0.75rem;
-    }
-
-    .sort-button {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      background: none;
-      border: none;
-      font: inherit;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 0;
-      transition: color 0.15s ease;
-    }
-
-    .sort-button:hover,
-    .sort-button.active {
-      color: var(--primary-color);
-    }
-
-    .sort-icon {
-      font-size: 0.875rem;
-      opacity: 0.3;
-      transition: opacity 0.15s ease;
-    }
-
-    .sort-icon.active {
-      opacity: 1;
-    }
-
-    .model-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .model-name {
-      font-weight: 600;
-      font-size: 0.9375rem;
-      color: var(--text-primary);
-    }
-
-    .model-id {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    }
-
-    .popular-badge {
-      display: inline-block;
-      padding: 0.125rem 0.5rem;
-      font-size: 0.625rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      color: white;
-      background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
-      border-radius: 9999px;
-      margin-top: 0.25rem;
-      width: fit-content;
-    }
-
+    /* Provider Badge */
     .provider-badge {
       display: inline-block;
-      padding: 0.25rem 0.75rem;
-      font-size: 0.75rem;
+      padding: 0.125rem 0.5rem;
+      font-size: 0.6875rem;
       font-weight: 600;
-      border-radius: 0.375rem;
-      background-color: var(--bg-tertiary);
-      color: var(--text-secondary);
+      border-radius: 0.25rem;
     }
 
-    .provider-badge.provider-openai {
+    .provider-openai {
       background-color: rgba(16, 163, 74, 0.1);
       color: #10a341;
     }
 
-    .provider-badge.provider-anthropic {
+    .provider-anthropic {
       background-color: rgba(239, 68, 68, 0.1);
       color: #ef4444;
     }
 
-    .provider-badge.provider-google {
+    .provider-google {
       background-color: rgba(59, 130, 246, 0.1);
       color: #3b82f6;
     }
 
-    .provider-badge.provider-mistral {
+    .provider-mistral {
       background-color: rgba(139, 92, 246, 0.1);
       color: #8b5cf6;
     }
 
-    .provider-badge.provider-meta {
+    .provider-meta {
       background-color: rgba(0, 123, 255, 0.1);
       color: #007bff;
     }
 
-    .price-value {
-      font-size: 1rem;
+    /* Score Colors */
+    .score-high {
+      color: var(--success-color);
       font-weight: 600;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+
+    .score-medium {
+      color: var(--warning-color);
+      font-weight: 600;
+    }
+
+    .score-low {
+      color: var(--error-color);
+      font-weight: 600;
+    }
+
+    /* Summary Cards */
+    .summary-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+
+    .summary-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-radius: 0.75rem;
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      min-width: 150px;
+      text-align: center;
+    }
+
+    .summary-card.best {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .summary-card.worst {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .summary-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .summary-model {
+      font-size: 0.875rem;
+      font-weight: 700;
       color: var(--text-primary);
     }
 
-    .context-window {
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
+    .summary-score {
+      font-size: 1.25rem;
+      font-weight: 800;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    }
+
+    .summary-card.best .summary-score {
+      color: var(--success-color);
+    }
+
+    .summary-card.worst .summary-score {
+      color: var(--error-color);
+    }
+
+    /* Chart Container */
+    .chart-container {
+      margin: 1.5rem 0;
+      min-height: 400px;
+    }
+
+    /* Legend */
+    .legend-grid {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .legend-grid h4 {
       font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      background-color: var(--bg-tertiary);
-      border-radius: 0.375rem;
-    }
-
-    .features-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.375rem;
-    }
-
-    .feature-tag {
-      display: inline-block;
-      padding: 0.125rem 0.5rem;
-      font-size: 0.6875rem;
-      font-weight: 500;
-      color: var(--text-secondary);
-      background-color: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 0.25rem;
-    }
-
-    .no-results {
-      text-align: center;
-      padding: 3rem 1.5rem;
-    }
-
-    .no-results p {
-      font-size: 1rem;
+      font-weight: 600;
       color: var(--text-secondary);
       margin: 0 0 1rem 0;
     }
 
-    .reset-button {
-      display: inline-block;
-      padding: 0.625rem 1.5rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: white;
-      background-color: var(--primary-color);
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
+    .legend-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
     }
 
-    .reset-button:hover {
-      background-color: var(--primary-hover);
+    .legend-item {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
     }
 
-    .pricing-table-footer {
-      margin-top: 1.5rem;
-      padding-top: 1rem;
-      border-top: 1px solid var(--border-color);
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 0.25rem;
     }
 
-    .disclaimer {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-align: center;
-      margin: 0;
+    .legend-text {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
       line-height: 1.5;
     }
 
+    .legend-text strong {
+      color: var(--text-primary);
+    }
+
+    /* Benchmark Colors */
+    .benchmark-mmlu { --chip-color: #3b82f6; }
+    .benchmark-humaneval { --chip-color: #10b981; }
+    .benchmark-math { --chip-color: #f59e0b; }
+    .benchmark-mgsm { --chip-color: #8b5cf6; }
+
+    /* Responsive */
     @media (max-width: 768px) {
       .demo-title {
         font-size: 1.75rem;
       }
 
-      .pricing-table-container {
-        padding: 0.75rem;
+      .card-container {
+        padding: 1rem;
         border-radius: 0.75rem;
       }
 
-      .pricing-table-header {
-        gap: 1rem;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-      }
-
-      .pricing-table-title {
+      .card-title {
         font-size: 1.25rem;
       }
 
-      .pricing-table-subtitle {
-        font-size: 0.875rem;
-      }
-
-      .pricing-table-controls {
-        flex-direction: column;
-        gap: 0.75rem;
-      }
-
-      .search-box {
-        max-width: 100%;
-      }
-
-      .pricing-table-wrapper {
-        border-radius: 0.5rem;
-        margin: 0 -0.75rem;
-        border-left: none;
-        border-right: none;
-      }
-
-      .pricing-table th,
-      .pricing-table td {
-        padding: 0.5rem;
+      .filter-chip {
+        padding: 0.375rem 0.75rem;
         font-size: 0.8125rem;
-      }
-
-      .pricing-table th {
-        font-size: 0.6875rem;
-      }
-
-      .model-name {
-        font-size: 0.8125rem;
-      }
-
-      .model-id {
-        font-size: 0.6875rem;
-      }
-
-      .price-value {
-        font-size: 0.875rem;
-      }
-
-      .provider-badge {
-        padding: 0.125rem 0.5rem;
-        font-size: 0.6875rem;
-      }
-
-      .context-window {
-        padding: 0.125rem 0.5rem;
-        font-size: 0.75rem;
-      }
-
-      .feature-tag {
-        font-size: 0.625rem;
-        padding: 0.0625rem 0.375rem;
-      }
-
-      .popular-badge {
-        font-size: 0.5625rem;
-        padding: 0.0625rem 0.375rem;
       }
     }
 
+    /* Dark Mode */
     @media (prefers-color-scheme: dark) {
-      .pricing-table-container {
+      .card-container {
         --bg-primary: #1e293b;
         --bg-secondary: #0f172a;
         --bg-tertiary: #334155;
@@ -551,408 +422,330 @@
         --text-muted: #94a3b8;
         --border-color: #334155;
       }
-
-      .pricing-table thead {
-        background-color: var(--bg-tertiary);
-      }
-
-      .pricing-table tbody tr:hover {
-        background-color: rgba(59, 130, 246, 0.1);
-      }
-
-      .search-input {
-        background-color: var(--bg-secondary);
-        color: var(--text-primary);
-      }
-
-      .search-input:focus {
-        background-color: var(--bg-primary);
-      }
-
-      .provider-badge {
-        background-color: var(--bg-tertiary);
-        color: var(--text-secondary);
-      }
-
-      .feature-tag {
-        background-color: var(--bg-tertiary);
-        border-color: var(--border-color);
-      }
     }
   </style>
 </head>
 <body>
   <div class="demo-container">
     <div class="demo-header">
-      <h1 class="demo-title">PricingTable Component Demo</h1>
-      <p class="demo-subtitle">Responsive LLM Token Pricing Comparison Table</p>
+      <h1 class="demo-title">LLM Pricing & Benchmark Tracker</h1>
+      <p class="demo-subtitle">Compare LLM pricing, performance, and benchmarks</p>
     </div>
 
-    <div class="demo-controls">
-      <button class="demo-button active" data-config="all">All Features</button>
-      <button class="demo-button" data-config="compact">Compact View</button>
-      <button class="demo-button" data-config="minimal">Minimal</button>
+    <!-- Benchmark Chart Section -->
+    <div class="demo-section">
+      <h2 class="section-title">Benchmark Performance</h2>
+      <div id="benchmark-root"></div>
     </div>
 
-    <div class="pricing-table-container">
-      <div class="pricing-table-header">
-        <div class="header-text">
-          <h2 class="pricing-table-title" id="tableTitle">LLM Token Pricing Comparison</h2>
-          <p class="pricing-table-subtitle" id="tableSubtitle">Compare pricing across different LLM providers</p>
-        </div>
-
-        <div class="pricing-table-controls">
-          <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search models..." class="search-input">
-          </div>
-
-          <div class="filter-dropdown">
-            <select id="providerFilter" class="provider-select">
-              <option value="all">All Providers</option>
-              <option value="OpenAI">OpenAI</option>
-              <option value="Anthropic">Anthropic</option>
-              <option value="Google">Google</option>
-              <option value="Mistral">Mistral</option>
-              <option value="Meta">Meta</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="pricing-table-wrapper">
-        <table class="pricing-table">
-          <thead>
-            <tr>
-              <th class="sticky-col">
-                <button class="sort-button active" data-sort="name">
-                  Model <span class="sort-icon active" id="sortIconName">↑</span>
-                </button>
-              </th>
-              <th>Provider</th>
-              <th>
-                <button class="sort-button" data-sort="inputPrice">
-                  Input / 1M tokens <span class="sort-icon" id="sortIconInput">↑</span>
-                </button>
-              </th>
-              <th>
-                <button class="sort-button" data-sort="outputPrice">
-                  Output / 1M tokens <span class="sort-icon" id="sortIconOutput">↑</span>
-                </button>
-              </th>
-              <th id="contextHeader">
-                <button class="sort-button" data-sort="contextWindow">
-                  Context Window <span class="sort-icon" id="sortIconContext">↑</span>
-                </button>
-              </th>
-              <th id="featuresHeader">Features</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody">
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pricing-table-footer">
-        <p class="disclaimer">
-          * Prices are indicative and may vary. Please check the official provider documentation
-          for the most accurate and up-to-date pricing information.
-        </p>
-      </div>
+    <!-- Pricing Table Section -->
+    <div class="demo-section">
+      <h2 class="section-title">Token Pricing</h2>
+      <div id="pricing-root"></div>
     </div>
   </div>
 
-  <script>
-    // Sample pricing data
-    const plans = [
-      {
-        id: 'gpt-4-turbo',
-        name: 'GPT-4 Turbo',
-        provider: 'OpenAI',
-        model: 'gpt-4-turbo-2024-04-09',
-        inputPrice: 10,
-        outputPrice: 30,
-        contextWindow: 128000,
-        features: ['Vision', 'JSON Mode', 'Function Calling'],
-        isPopular: true,
-      },
-      {
-        id: 'gpt-3.5-turbo',
-        name: 'GPT-3.5 Turbo',
-        provider: 'OpenAI',
-        model: 'gpt-3.5-turbo-0125',
-        inputPrice: 0.5,
-        outputPrice: 1.5,
-        contextWindow: 16385,
-        features: ['Fast', 'Cost-effective'],
-      },
-      {
-        id: 'claude-3-opus',
-        name: 'Claude 3 Opus',
-        provider: 'Anthropic',
-        model: 'claude-3-opus-20240229',
-        inputPrice: 15,
-        outputPrice: 75,
-        contextWindow: 200000,
-        features: ['Vision', 'Extended Thinking', 'Tool Use'],
-        isPopular: true,
-      },
-      {
-        id: 'claude-3-sonnet',
-        name: 'Claude 3 Sonnet',
-        provider: 'Anthropic',
-        model: 'claude-3-sonnet-20240229',
-        inputPrice: 3,
-        outputPrice: 15,
-        contextWindow: 200000,
-        features: ['Vision', 'Tool Use'],
-      },
-      {
-        id: 'claude-3-haiku',
-        name: 'Claude 3 Haiku',
-        provider: 'Anthropic',
-        model: 'claude-3-haiku-20240307',
-        inputPrice: 0.25,
-        outputPrice: 1.25,
-        contextWindow: 200000,
-        features: ['Fast', 'Cost-effective'],
-      },
-      {
-        id: 'gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
-        provider: 'Google',
-        model: 'gemini-1.5-pro-preview-0514',
-        inputPrice: 3.5,
-        outputPrice: 10.5,
-        contextWindow: 1000000,
-        features: ['1M Context', 'Vision', 'Audio'],
-        isPopular: true,
-      },
-      {
-        id: 'gemini-1.5-flash',
-        name: 'Gemini 1.5 Flash',
-        provider: 'Google',
-        model: 'gemini-1.5-flash-preview-0514',
-        inputPrice: 0.35,
-        outputPrice: 0.53,
-        contextWindow: 1000000,
-        features: ['1M Context', 'Fast'],
-      },
-      {
-        id: 'mistral-large',
-        name: 'Mistral Large',
-        provider: 'Mistral',
-        model: 'mistral-large-2407',
-        inputPrice: 4,
-        outputPrice: 12,
-        contextWindow: 128000,
-        features: ['Multilingual', 'Function Calling'],
-        isPopular: true,
-      },
-      {
-        id: 'mistral-small',
-        name: 'Mistral Small',
-        provider: 'Mistral',
-        model: 'mistral-small-2409',
-        inputPrice: 0.2,
-        outputPrice: 0.6,
-        contextWindow: 128000,
-        features: ['Fast', 'Cost-effective'],
-      },
-      {
-        id: 'llama-3-70b',
-        name: 'Llama 3 70B',
-        provider: 'Meta',
-        model: 'llama-3-70b-instruct',
-        inputPrice: 0.65,
-        outputPrice: 2.75,
-        contextWindow: 8192,
-        features: ['Open Source', 'Large Context'],
-      },
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } = Recharts;
+
+    // Benchmark Colors
+    const BENCHMARK_COLORS = {
+      MMLU: '#3b82f6',
+      HumanEval: '#10b981',
+      MATH: '#f59e0b',
+      MGSM: '#8b5cf6',
+    };
+
+    // Provider Colors
+    const PROVIDER_COLORS = {
+      OpenAI: '#10a341',
+      Anthropic: '#ef4444',
+      Google: '#3b82f6',
+      Mistral: '#8b5cf6',
+      Meta: '#007bff',
+    };
+
+    // Benchmark Data
+    const benchmarkData = [
+      { modelId: 'gpt-4-turbo', modelName: 'GPT-4 Turbo', provider: 'OpenAI', mmlu: 86.4, humaneval: 90.2, math: 73.4, mgsm: 79.8 },
+      { modelId: 'claude-3-opus', modelName: 'Claude 3 Opus', provider: 'Anthropic', mmlu: 88.7, humaneval: 84.0, math: 60.1, mgsm: 83.6 },
+      { modelId: 'claude-3-sonnet', modelName: 'Claude 3 Sonnet', provider: 'Anthropic', mmlu: 79.0, humaneval: 73.0, math: 52.3, mgsm: 72.6 },
+      { modelId: 'gemini-1.5-pro', modelName: 'Gemini 1.5 Pro', provider: 'Google', mmlu: 85.9, humaneval: 84.6, math: 58.5, mgsm: 79.4 },
+      { modelId: 'gemini-1.5-flash', modelName: 'Gemini 1.5 Flash', provider: 'Google', mmlu: 85.0, humaneval: 79.5, math: 52.1, mgsm: 74.8 },
+      { modelId: 'mistral-large', modelName: 'Mistral Large', provider: 'Mistral', mmlu: 81.2, humaneval: 81.0, math: 51.2, mgsm: 68.4 },
+      { modelId: 'llama-3-70b', modelName: 'Llama 3 70B', provider: 'Meta', mmlu: 82.0, humaneval: 81.7, math: 51.8, mgsm: 69.5 },
     ];
 
-    let currentConfig = 'all';
-    let sortKey = 'inputPrice';
-    let sortDirection = 'asc';
-    let filterProvider = 'all';
-    let searchQuery = '';
+    // Pricing Data
+    const pricingData = [
+      { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', model: 'gpt-4-turbo-2024-04-09', inputPrice: 10, outputPrice: 30, contextWindow: 128000, isPopular: true },
+      { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic', model: 'claude-3-opus-20240229', inputPrice: 15, outputPrice: 75, contextWindow: 200000, isPopular: true },
+      { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'Anthropic', model: 'claude-3-sonnet-20240229', inputPrice: 3, outputPrice: 15, contextWindow: 200000 },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'Google', model: 'gemini-1.5-pro-preview-0514', inputPrice: 3.5, outputPrice: 10.5, contextWindow: 1000000, isPopular: true },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', model: 'gemini-1.5-flash-preview-0514', inputPrice: 0.35, outputPrice: 0.53, contextWindow: 1000000 },
+      { id: 'mistral-large', name: 'Mistral Large', provider: 'Mistral', model: 'mistral-large-2407', inputPrice: 4, outputPrice: 12, contextWindow: 128000, isPopular: true },
+      { id: 'llama-3-70b', name: 'Llama 3 70B', provider: 'Meta', model: 'llama-3-70b-instruct', inputPrice: 0.65, outputPrice: 2.75, contextWindow: 8192 },
+    ];
 
-    function formatPrice(price) {
-      return '$' + price.toFixed(price < 1 ? 4 : 2);
-    }
+    // Benchmark Chart Component
+    function BenchmarkChart() {
+      const [selectedBenchmarks, setSelectedBenchmarks] = useState(['MMLU', 'HumanEval', 'MATH', 'MGSM']);
+      const [sortKey, setSortKey] = useState('mmlu');
+      const [sortDirection, setSortDirection] = useState('desc');
 
-    function formatContextWindow(tokens) {
-      if (tokens >= 1000000) {
-        return tokens / 1000000 + 'M';
-      }
-      return tokens / 1000 + 'K';
-    }
+      const processedData = useMemo(() => {
+        return benchmarkData.map(item => {
+          const scores = selectedBenchmarks.map(b => item[b.toLowerCase()]).filter(s => typeof s === 'number');
+          const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+          return { ...item, overall: Math.round(avg * 10) / 10 };
+        }).sort((a, b) => {
+          const aVal = a[sortKey] || a.overall;
+          const bVal = b[sortKey] || b.overall;
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+      }, [selectedBenchmarks, sortKey, sortDirection]);
 
-    function getLowestPrices() {
-      const inputMin = Math.min(...plans.map(p => p.inputPrice));
-      const outputMin = Math.min(...plans.map(p => p.outputPrice));
-      return { input: inputMin, output: outputMin };
-    }
+      const bestModel = processedData[0];
+      const worstModel = processedData[processedData.length - 1];
 
-    function renderTable() {
-      const tbody = document.getElementById('tableBody');
-      const lowestPrices = getLowestPrices();
-
-      let filtered = [...plans];
-
-      if (filterProvider !== 'all') {
-        filtered = filtered.filter(p => p.provider === filterProvider);
-      }
-
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(p =>
-          p.name.toLowerCase().includes(query) ||
-          p.provider.toLowerCase().includes(query) ||
-          p.model.toLowerCase().includes(query)
+      const toggleBenchmark = (benchmark) => {
+        setSelectedBenchmarks(prev =>
+          prev.includes(benchmark) ? prev.filter(b => b !== benchmark) : [...prev, benchmark]
         );
-      }
+      };
 
-      filtered.sort((a, b) => {
-        let aVal = a[sortKey];
-        let bVal = b[sortKey];
-
-        if (sortKey === 'name') {
-          return sortDirection === 'asc'
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
-        }
-
-        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-      });
-
-      tbody.innerHTML = filtered.map(plan => {
-        const isInputLowest = plan.inputPrice === lowestPrices.input;
-        const isOutputLowest = plan.outputPrice === lowestPrices.output;
-
-        const contextCol = currentConfig !== 'minimal'
-          ? `<td><span class="context-window">${formatContextWindow(plan.contextWindow)}</span></td>`
-          : '';
-
-        const featuresCol = currentConfig === 'all'
-          ? `<td>
-              <div class="features-list">
-                ${plan.features.map(f => `<span class="feature-tag">${f}</span>`).join('')}
+      const CustomTooltip = ({ active, payload, label }) => {
+        if (!active || !payload || !payload.length) return null;
+        const model = benchmarkData.find(m => m.modelName === label);
+        return (
+          <div style={{ background: 'white', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem' }}>
+              <strong>{label}</strong>
+              <span style={{ color: PROVIDER_COLORS[model?.provider] }}>{model?.provider}</span>
+            </div>
+            {payload.map((entry, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                <span>{entry.name}:</span>
+                <strong style={{ fontFamily: 'monospace' }}>{entry.value.toFixed(1)}%</strong>
               </div>
-            </td>`
-          : '';
+            ))}
+          </div>
+        );
+      };
 
-        return `
-          <tr class="${plan.isPopular ? 'popular' : ''}">
-            <td class="sticky-col">
-              <div class="model-info">
-                <span class="model-name">${plan.name}</span>
-                <span class="model-id">${plan.model}</span>
-                ${plan.isPopular ? '<span class="popular-badge">Popular</span>' : ''}
+      const getScoreClass = (score) => {
+        if (score >= 80) return 'score-high';
+        if (score >= 60) return 'score-medium';
+        return 'score-low';
+      };
+
+      return (
+        <div className="card-container">
+          <div className="card-header">
+            <h2 className="card-title">LLM Benchmark Performance</h2>
+            <p className="card-subtitle">Compare performance across MMLU, HumanEval, MATH, and MGSM benchmarks</p>
+            <div className="filter-chips">
+              {['MMLU', 'HumanEval', 'MATH', 'MGSM'].map(b => (
+                <button
+                  key={b}
+                  className={`filter-chip benchmark-${b.toLowerCase()} ${selectedBenchmarks.includes(b) ? 'active' : ''}`}
+                  onClick={() => toggleBenchmark(b)}
+                  style={{ '--chip-color': BENCHMARK_COLORS[b] }}
+                >
+                  <span className="chip-dot" style={{ backgroundColor: BENCHMARK_COLORS[b] }} />
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="chart-container">
+            {selectedBenchmarks.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={processedData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="modelName" tick={{ fill: '#475569', fontSize: 12 }} angle={-45} textAnchor="end" height={80} />
+                  <YAxis domain={[0, 100]} tick={{ fill: '#475569', fontSize: 12 }} tickFormatter={v => `${v}%`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+                  <ReferenceLine y={75} stroke="#94a3b8" strokeDasharray="5 5" label={{ value: '75% Target', position: 'insideTopRight', fill: '#94a3b8' }} />
+                  {selectedBenchmarks.map(b => (
+                    <Bar key={b} dataKey={b.toLowerCase()} name={b} fill={BENCHMARK_COLORS[b]} radius={[4, 4, 0, 0]} />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, color: '#94a3b8' }}>
+                Select at least one benchmark to display
               </div>
-            </td>
-            <td>
-              <span class="provider-badge provider-${plan.provider.toLowerCase()}">
-                ${plan.provider}
-              </span>
-            </td>
-            <td>
-              <span class="price-value ${isInputLowest ? 'lowest' : ''}">
-                ${formatPrice(plan.inputPrice)}
-              </span>
-            </td>
-            <td>
-              <span class="price-value ${isOutputLowest ? 'lowest' : ''}">
-                ${formatPrice(plan.outputPrice)}
-              </span>
-            </td>
-            ${contextCol}
-            ${featuresCol}
-          </tr>
-        `;
-      }).join('');
+            )}
+          </div>
+
+          <div className="summary-cards">
+            <div className="summary-card best">
+              <span className="summary-label">Best Overall</span>
+              <span className="summary-model">{bestModel?.modelName}</span>
+              <span className="summary-score">{bestModel?.overall}%</span>
+            </div>
+            <div className="summary-card worst">
+              <span className="summary-label">Needs Improvement</span>
+              <span className="summary-model">{worstModel?.modelName}</span>
+              <span className="summary-score">{worstModel?.overall}%</span>
+            </div>
+          </div>
+
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Provider</th>
+                  {selectedBenchmarks.map(b => <th key={b}>{b}</th>)}
+                  {selectedBenchmarks.length > 1 && <th>Average</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {processedData.map(model => (
+                  <tr key={model.modelId}>
+                    <td><strong>{model.modelName}</strong></td>
+                    <td><span className={`provider-badge provider-${model.provider.toLowerCase()}`}>{model.provider}</span></td>
+                    {selectedBenchmarks.map(b => (
+                      <td key={b}><span className={getScoreClass(model[b.toLowerCase()])}>{model[b.toLowerCase()].toFixed(1)}%</span></td>
+                    ))}
+                    {selectedBenchmarks.length > 1 && <td><strong style={{ color: '#3b82f6' }}>{model.overall}%</strong></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="legend-grid">
+            <h4>Benchmark Descriptions</h4>
+            <div className="legend-items">
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: BENCHMARK_COLORS.MMLU }} />
+                <div className="legend-text"><strong>MMLU</strong> - Massive Multitask Language Understanding. Tests knowledge across 57 subjects.</div>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: BENCHMARK_COLORS.HumanEval }} />
+                <div className="legend-text"><strong>HumanEval</strong> - Code generation benchmark with Python programming problems.</div>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: BENCHMARK_COLORS.MATH }} />
+                <div className="legend-text"><strong>MATH</strong> - Mathematical problem solving with 12,500 competition math problems.</div>
+              </div>
+              <div className="legend-item">
+                <span className="legend-color" style={{ backgroundColor: BENCHMARK_COLORS.MGSM }} />
+                <div className="legend-text"><strong>MGSM</strong> - Multilingual Grade School Math across 10 languages.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
     }
 
-    function updateSortIcons() {
-      document.querySelectorAll('.sort-button').forEach(btn => {
-        const icon = btn.querySelector('.sort-icon');
-        icon.classList.remove('active');
-      });
+    // Pricing Table Component
+    function PricingTable() {
+      const [sortKey, setSortKey] = useState('inputPrice');
+      const [sortDir, setSortDir] = useState('asc');
+      const [filter, setFilter] = useState('all');
+      const [search, setSearch] = useState('');
 
-      const activeBtn = document.querySelector(`.sort-button[data-sort="${sortKey}"]`);
-      if (activeBtn) {
-        const icon = activeBtn.querySelector('.sort-icon');
-        icon.classList.add('active');
-        icon.textContent = sortDirection === 'asc' ? '↑' : '↓';
-      }
-    }
-
-    function applyConfig(config) {
-      currentConfig = config;
-
-      const title = document.getElementById('tableTitle');
-      const subtitle = document.getElementById('tableSubtitle');
-      const contextHeader = document.getElementById('contextHeader');
-      const featuresHeader = document.getElementById('featuresHeader');
-
-      switch (config) {
-        case 'all':
-          title.textContent = 'LLM Token Pricing Comparison';
-          subtitle.textContent = 'Compare pricing across different LLM providers';
-          contextHeader.style.display = '';
-          featuresHeader.style.display = '';
-          break;
-        case 'compact':
-          title.textContent = 'Pricing Overview';
-          subtitle.textContent = 'Key pricing metrics';
-          contextHeader.style.display = '';
-          featuresHeader.style.display = 'none';
-          break;
-        case 'minimal':
-          title.textContent = 'Token Costs';
-          subtitle.textContent = 'Simple price comparison';
-          contextHeader.style.display = 'none';
-          featuresHeader.style.display = 'none';
-          break;
-      }
-
-      document.querySelectorAll('.demo-button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.config === config);
-      });
-
-      renderTable();
-    }
-
-    // Event Listeners
-    document.querySelectorAll('.demo-button').forEach(btn => {
-      btn.addEventListener('click', () => applyConfig(btn.dataset.config));
-    });
-
-    document.querySelectorAll('.sort-button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const key = btn.dataset.sort;
-        if (sortKey === key) {
-          sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortKey = key;
-          sortDirection = 'asc';
+      const filteredData = useMemo(() => {
+        let data = [...pricingData];
+        if (filter !== 'all') data = data.filter(p => p.provider === filter);
+        if (search) {
+          const q = search.toLowerCase();
+          data = data.filter(p => p.name.toLowerCase().includes(q) || p.provider.toLowerCase().includes(q));
         }
-        updateSortIcons();
-        renderTable();
-      });
-    });
+        data.sort((a, b) => {
+          const aVal = a[sortKey];
+          const bVal = b[sortKey];
+          return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+        return data;
+      }, [filter, search, sortKey, sortDir]);
 
-    document.getElementById('providerFilter').addEventListener('change', (e) => {
-      filterProvider = e.target.value;
-      renderTable();
-    });
+      const lowestPrices = {
+        input: Math.min(...pricingData.map(p => p.inputPrice)),
+        output: Math.min(...pricingData.map(p => p.outputPrice)),
+      };
 
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      searchQuery = e.target.value;
-      renderTable();
-    });
+      const formatPrice = (p) => `$${p.toFixed(p < 1 ? 4 : 2)}`;
+      const formatContext = (c) => c >= 1000000 ? `${c/1000000}M` : `${c/1000}K`;
 
-    // Initial render
-    renderTable();
+      return (
+        <div className="card-container">
+          <div className="card-header">
+            <h2 className="card-title">Token Pricing Comparison</h2>
+            <p className="card-subtitle">Compare pricing across different LLM providers</p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <input
+                type="text"
+                placeholder="Search models..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', fontSize: '0.875rem', minWidth: 200 }}
+              />
+              <select
+                value={filter}
+                onChange={e => setFilter(e.target.value)}
+                style={{ padding: '0.5rem 2rem 0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', fontSize: '0.875rem', cursor: 'pointer' }}
+              >
+                <option value="all">All Providers</option>
+                <option value="OpenAI">OpenAI</option>
+                <option value="Anthropic">Anthropic</option>
+                <option value="Google">Google</option>
+                <option value="Mistral">Mistral</option>
+                <option value="Meta">Meta</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Provider</th>
+                  <th>Input / 1M tokens</th>
+                  <th>Output / 1M tokens</th>
+                  <th>Context Window</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map(model => (
+                  <tr key={model.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <strong>{model.name}</strong>
+                        {model.isPopular && <span style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', color: 'white', padding: '0.125rem 0.5rem', borderRadius: '9999px', fontSize: '0.625rem', fontWeight: 600 }}>Popular</span>}
+                      </div>
+                    </td>
+                    <td><span className={`provider-badge provider-${model.provider.toLowerCase()}`}>{model.provider}</span></td>
+                    <td><span style={{ fontFamily: 'monospace', fontWeight: 600, color: model.inputPrice === lowestPrices.input ? '#10b981' : 'inherit' }}>{model.inputPrice === lowestPrices.input && '💰 '}{formatPrice(model.inputPrice)}</span></td>
+                    <td><span style={{ fontFamily: 'monospace', fontWeight: 600, color: model.outputPrice === lowestPrices.output ? '#10b981' : 'inherit' }}>{model.outputPrice === lowestPrices.output && '💰 '}{formatPrice(model.outputPrice)}</span></td>
+                    <td><span style={{ padding: '0.25rem 0.75rem', background: '#f1f5f9', borderRadius: '0.375rem', fontSize: '0.875rem' }}>{formatContext(model.contextWindow)}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center', marginTop: '1rem' }}>
+            * Prices are indicative and may vary. Please check official provider documentation.
+          </p>
+        </div>
+      );
+    }
+
+    // Render Components
+    const benchmarkRoot = document.getElementById('benchmark-root');
+    const pricingRoot = document.getElementById('pricing-root');
+
+    if (benchmarkRoot) ReactDOM.createRoot(benchmarkRoot).render(<BenchmarkChart />);
+    if (pricingRoot) ReactDOM.createRoot(pricingRoot).render(<PricingTable />);
   </script>
 </body>
 </html>
