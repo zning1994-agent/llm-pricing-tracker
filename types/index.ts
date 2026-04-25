@@ -23,6 +23,47 @@ export interface AppContextType {
   clearError: () => void;
 }
 
+// Pricing data for LLM models
+export interface PricingData {
+  inputPrice: number; // Price per million input tokens
+  outputPrice: number; // Price per million output tokens
+  contextWindow: number; // Maximum context window in tokens
+}
+
+// Benchmark scores for LLM models
+export interface BenchmarkData {
+  mmlu: number; // Massive Multitask Language Understanding (%)
+  humaneval: number; // HumanEval code completion (%)
+  math: number; // MATH problem solving (%)
+  mgsm: number; // Multilingual Grade School Math (%)
+}
+
+// Capability levels
+export type CapabilityLevel = 'full' | 'partial' | 'limited' | 'none';
+
+// Capability features for LLM models
+export interface CapabilityFeature {
+  contextLength: number; // Context window size
+  multimodal: CapabilityLevel; // Image/audio input support
+  toolUse: CapabilityLevel; // Tool calling / function execution
+  vision: CapabilityLevel; // Image understanding
+  streaming: CapabilityLevel; // Streaming response support
+  functionCalling: CapabilityLevel; // Function calling support
+}
+
+// Complete model data structure
+export interface Model {
+  id: string;
+  name: string;
+  provider: string;
+  model: string; // Full model identifier (e.g., "gpt-5.5-2025-01-25")
+  isPopular: boolean;
+  features: string[]; // Feature tags
+  pricing: PricingData;
+  benchmark: BenchmarkData;
+  capability: CapabilityFeature;
+}
+
 // Model data combining all sources
 export interface LLMModel {
   id: string;
