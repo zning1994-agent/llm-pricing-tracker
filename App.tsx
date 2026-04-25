@@ -1,4 +1,6 @@
 import React, { useReducer, useCallback, useMemo, createContext, useContext } from 'react';
+import { Header } from './src/components/Header';
+import { LastUpdated } from './src/components/LastUpdated';
 import { PricingTable, PricingPlan } from './src/components/PricingTable';
 import { BenchmarkChart, BenchmarkScore } from './src/components/BenchmarkChart';
 import { CapabilityMatrix, ModelCapability } from './src/components/CapabilityMatrix';
@@ -57,7 +59,7 @@ interface AppContextType {
 // Context
 const AppContext = createContext<AppContextType | null>(null);
 
-const useAppContext = () => {
+export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
     throw new Error('useAppContext must be used within AppProvider');
@@ -70,7 +72,7 @@ interface AppProviderProps {
   children: React.ReactNode;
 }
 
-const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, {
     viewMode: 'all',
     lastRefreshed: null,
@@ -119,53 +121,6 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   );
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;
-};
-
-// Header Component
-const Header: React.FC = () => {
-  const { state, refresh } = useAppContext();
-
-  const formatLastRefreshed = () => {
-    if (!state.lastRefreshed) return 'Never';
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - state.lastRefreshed.getTime()) / 1000);
-    
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    return state.lastRefreshed.toLocaleTimeString();
-  };
-
-  return (
-    <header className="app-header">
-      <div className="header-content">
-        <div className="header-brand">
-          <h1 className="header-title">LLM Pricing Tracker</h1>
-          <p className="header-subtitle">Compare LLM pricing, benchmarks, and capabilities</p>
-        </div>
-
-        <div className="header-actions">
-          <div className="refresh-status">
-            <span className="refresh-label">Last updated:</span>
-            <span className="refresh-time">{formatLastRefreshed()}</span>
-          </div>
-
-          <button
-            className={`refresh-button ${state.refreshState}`}
-            onClick={refresh}
-            disabled={state.refreshState === 'refreshing'}
-            aria-label="Refresh data"
-          >
-            <span className={`refresh-icon ${state.refreshState === 'refreshing' ? 'spinning' : ''}`}>
-              {state.refreshState === 'success' ? '✓' : state.refreshState === 'error' ? '✕' : '↻'}
-            </span>
-            <span className="refresh-text">
-              {state.refreshState === 'refreshing' ? 'Refreshing...' : 'Refresh'}
-            </span>
-          </button>
-        </div>
-      </div>
-    </header>
-  );
 };
 
 // Navigation Component
@@ -287,7 +242,7 @@ const ErrorToast: React.FC = () => {
 
 // Main App Component
 const App: React.FC = () => {
-  const { state, selectModel } = useAppContext();
+  const { state, selectModel, refresh } = useAppContext();
 
   const pricingPlans: PricingPlan[] = [
     { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'OpenAI', model: 'gpt-4-turbo-2024-04-09', inputPrice: 10, outputPrice: 30, contextWindow: 128000, features: ['Vision', 'JSON Mode', 'Function Calling'], isPopular: true },
@@ -332,9 +287,20 @@ const App: React.FC = () => {
 
   return (
     <div className="app">
-      <Header />
+      <Header
+        lastRefreshed={state.lastRefreshed}
+        onDataRefresh={refresh}
+      />
       <Navigation />
       <main className="app-main">
+        <div className="data-freshness-bar">
+          <LastUpdated
+            lastUpdated={state.lastRefreshed}
+            showIcon={true}
+            size="sm"
+          />
+        </div>
+
         {state.viewMode === 'all' && (
           <div className="all-views">
             <section className="app-section">
@@ -413,5 +379,5 @@ const AppWithProvider: React.FC = () => {
 };
 
 export default AppWithProvider;
-export { App, AppProvider, useAppContext };
+export { App };
 export type { AppState, AppContextType, ViewMode, RefreshState };

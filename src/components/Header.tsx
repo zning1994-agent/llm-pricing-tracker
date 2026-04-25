@@ -125,4 +125,5 @@ const Header: React.FC<HeaderProps> = ({ onDataRefresh, lastRefreshed }) => {
   );
 };
 
+export { Header };
 export default Header;

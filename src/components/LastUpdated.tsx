@@ -146,4 +146,5 @@ const LastUpdated: React.FC<LastUpdatedProps> = ({
   );
 };
 
+export { LastUpdated };
 export default LastUpdated;
