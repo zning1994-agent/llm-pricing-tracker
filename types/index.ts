@@ -44,3 +44,16 @@ export interface LLMModel {
   streaming?: 'full' | 'partial' | 'limited' | 'none';
   multiModal?: 'full' | 'partial' | 'limited' | 'none';
 }
+
+// Refresh context type for global state management
+export interface RefreshContextType {
+  lastUpdated: Date | null;
+  isRefreshing: boolean;
+  refreshState: RefreshState;
+  onRefresh: () => Promise<void>;
+}
+
+export interface RefreshProviderProps {
+  children: React.ReactNode;
+  onRefresh?: () => Promise<void>;
+}
