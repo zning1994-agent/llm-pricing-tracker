@@ -1,84 +1,49 @@
 import React, { useState, useMemo } from 'react';
-import './PricingTable.css';
+import { models } from '../data/models';
+import type { Model } from '../../types';
 
-export interface PricingPlan {
-  id: string;
-  name: string;
-  provider: string;
-  model: string;
-  inputPrice: number;
-  outputPrice: number;
-  contextWindow: number;
-  features?: string[];
-  isPopular?: boolean;
-  currency?: string;
-}
-
+// Props interface for the component
 export interface PricingTableProps {
-  plans: PricingPlan[];
-  onSelectPlan?: (plan: PricingPlan) => void;
+  data?: Model[];
+  onSelectModel?: (model: Model) => void;
   showContextWindow?: boolean;
-  showFeatures?: boolean;
-  highlightLowest?: 'input' | 'output' | 'both' | null;
   title?: string;
-  subtitle?: string;
 }
 
-type SortKey = 'inputPrice' | 'outputPrice' | 'contextWindow' | 'name';
+// Sort types
+type SortKey = 'inputPrice' | 'outputPrice' | 'name';
 type SortDirection = 'asc' | 'desc';
 
+// Provider colors
+const PROVIDER_COLORS: Record<string, string> = {
+  OpenAI: 'bg-green-100 text-green-800',
+  Anthropic: 'bg-red-100 text-red-800',
+  Google: 'bg-blue-100 text-blue-800',
+  DeepSeek: 'bg-purple-100 text-purple-800',
+};
+
 export const PricingTable: React.FC<PricingTableProps> = ({
-  plans,
-  onSelectPlan,
+  data = models,
+  onSelectModel,
   showContextWindow = true,
-  showFeatures = true,
-  highlightLowest = 'both',
-  title = 'LLM Token Pricing Comparison',
-  subtitle = 'Compare pricing across different LLM providers',
+  title = 'LLM Pricing Comparison',
 }) => {
   const [sortKey, setSortKey] = useState<SortKey>('inputPrice');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [filterProvider, setFilterProvider] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const providers = useMemo(() => {
-    const uniqueProviders = [...new Set(plans.map((p) => p.provider))];
-    return ['all', ...uniqueProviders];
-  }, [plans]);
-
-  const filteredAndSortedPlans = useMemo(() => {
-    let result = [...plans];
-
-    if (filterProvider !== 'all') {
-      result = result.filter((p) => p.provider === filterProvider);
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.provider.toLowerCase().includes(query) ||
-          p.model.toLowerCase().includes(query)
-      );
-    }
-
-    result.sort((a, b) => {
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
       let aVal: string | number;
       let bVal: string | number;
 
       switch (sortKey) {
         case 'inputPrice':
-          aVal = a.inputPrice;
-          bVal = b.inputPrice;
+          aVal = a.pricing.inputPerMillion;
+          bVal = b.pricing.inputPerMillion;
           break;
         case 'outputPrice':
-          aVal = a.outputPrice;
-          bVal = b.outputPrice;
-          break;
-        case 'contextWindow':
-          aVal = a.contextWindow;
-          bVal = b.contextWindow;
+          aVal = a.pricing.outputPerMillion;
+          bVal = b.pricing.outputPerMillion;
           break;
         case 'name':
           aVal = a.name;
@@ -88,28 +53,17 @@ export const PricingTable: React.FC<PricingTableProps> = ({
           return 0;
       }
 
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
+      if (typeof aVal === 'string') {
         return sortDirection === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
+          ? aVal.localeCompare(bVal as string)
+          : (bVal as string).localeCompare(aVal);
       }
 
       return sortDirection === 'asc'
         ? (aVal as number) - (bVal as number)
         : (bVal as number) - (aVal as number);
     });
-
-    return result;
-  }, [plans, filterProvider, searchQuery, sortKey, sortDirection]);
-
-  const lowestPrices = useMemo(() => {
-    if (!highlightLowest) return { input: null, output: null };
-
-    const inputMin = Math.min(...plans.map((p) => p.inputPrice));
-    const outputMin = Math.min(...plans.map((p) => p.outputPrice));
-
-    return { input: inputMin, output: outputMin };
-  }, [plans, highlightLowest]);
+  }, [data, sortKey, sortDirection]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -120,164 +74,129 @@ export const PricingTable: React.FC<PricingTableProps> = ({
     }
   };
 
-  const formatPrice = (price: number, currency: string = 'USD'): string => {
+  const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency,
+      currency: 'USD',
       minimumFractionDigits: price < 1 ? 4 : 2,
       maximumFractionDigits: price < 1 ? 4 : 2,
-    }).format(price / 1000000);
+    }).format(price);
   };
 
-  const formatContextWindow = (tokens: number): string => {
+  const formatContextLength = (tokens: number): string => {
     if (tokens >= 1000000) {
-      return `${(tokens / 1000000).toLocaleString()}M`;
+      return `${(tokens / 1000000).toFixed(0)}M`;
     }
-    return `${(tokens / 1000).toLocaleString()}K`;
+    return `${(tokens / 1000).toFixed(0)}K`;
   };
 
-  const SortIcon = ({ active, direction }: { active: boolean; direction: SortDirection }) => (
-    <span className={`sort-icon ${active ? 'active' : ''}`}>
-      {active && direction === 'desc' ? '↓' : '↑'}
-    </span>
-  );
+  const getLowestPrice = (key: 'inputPrice' | 'outputPrice') => {
+    return Math.min(...data.map((m) => 
+      key === 'inputPrice' ? m.pricing.inputPerMillion : m.pricing.outputPerMillion
+    ));
+  };
 
   return (
-    <div className="pricing-table-container">
-      <div className="pricing-table-header">
-        <div className="header-text">
-          <h2 className="pricing-table-title">{title}</h2>
-          <p className="pricing-table-subtitle">{subtitle}</p>
-        </div>
-
-        <div className="pricing-table-controls">
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="Search models..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-
-          <div className="filter-dropdown">
-            <select
-              value={filterProvider}
-              onChange={(e) => setFilterProvider(e.target.value)}
-              className="provider-select"
-            >
-              {providers.map((provider) => (
-                <option key={provider} value={provider}>
-                  {provider === 'all' ? 'All Providers' : provider}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="pricing-table-wrapper">
-        <table className="pricing-table">
+    <div className="bg-white rounded-xl shadow-lg p-4 md:p-6">
+      <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">{title}</h2>
+      
+      {/* Table wrapper with horizontal scroll on mobile */}
+      <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+        <table className="w-full min-w-[600px] md:min-w-full">
           <thead>
-            <tr>
-              <th className="sticky-col">
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-3 px-2 md:px-4 text-sm font-semibold text-gray-700">
                 <button
-                  className={`sort-button ${sortKey === 'name' ? 'active' : ''}`}
                   onClick={() => handleSort('name')}
+                  className="flex items-center gap-1 hover:text-blue-600"
                 >
-                  Model <SortIcon active={sortKey === 'name'} direction={sortDirection} />
+                  Model
+                  {sortKey === 'name' && (
+                    <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                  )}
                 </button>
               </th>
-              <th>Provider</th>
-              <th>
+              <th className="text-left py-3 px-2 md:px-4 text-sm font-semibold text-gray-700 hidden md:table-cell">
+                Provider
+              </th>
+              <th className="text-right py-3 px-2 md:px-4 text-sm font-semibold text-gray-700">
                 <button
-                  className={`sort-button ${sortKey === 'inputPrice' ? 'active' : ''}`}
                   onClick={() => handleSort('inputPrice')}
+                  className="flex items-center gap-1 ml-auto hover:text-blue-600"
                 >
-                  Input / 1M tokens{' '}
-                  <SortIcon active={sortKey === 'inputPrice'} direction={sortDirection} />
+                  Input $/1M
+                  {sortKey === 'inputPrice' && (
+                    <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                  )}
                 </button>
               </th>
-              <th>
+              <th className="text-right py-3 px-2 md:px-4 text-sm font-semibold text-gray-700">
                 <button
-                  className={`sort-button ${sortKey === 'outputPrice' ? 'active' : ''}`}
                   onClick={() => handleSort('outputPrice')}
+                  className="flex items-center gap-1 ml-auto hover:text-blue-600"
                 >
-                  Output / 1M tokens{' '}
-                  <SortIcon active={sortKey === 'outputPrice'} direction={sortDirection} />
+                  Output $/1M
+                  {sortKey === 'outputPrice' && (
+                    <span className="text-xs">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                  )}
                 </button>
               </th>
               {showContextWindow && (
-                <th>
-                  <button
-                    className={`sort-button ${sortKey === 'contextWindow' ? 'active' : ''}`}
-                    onClick={() => handleSort('contextWindow')}
-                  >
-                    Context Window{' '}
-                    <SortIcon active={sortKey === 'contextWindow'} direction={sortDirection} />
-                  </button>
+                <th className="text-right py-3 px-2 md:px-4 text-sm font-semibold text-gray-700 hidden lg:table-cell">
+                  Context
                 </th>
               )}
-              {showFeatures && <th>Features</th>}
             </tr>
           </thead>
           <tbody>
-            {filteredAndSortedPlans.map((plan) => {
-              const isInputLowest =
-                highlightLowest &&
-                (highlightLowest === 'input' || highlightLowest === 'both') &&
-                plan.inputPrice === lowestPrices.input;
-
-              const isOutputLowest =
-                highlightLowest &&
-                (highlightLowest === 'output' || highlightLowest === 'both') &&
-                plan.outputPrice === lowestPrices.output;
+            {sortedData.map((model) => {
+              const isLowestInput = model.pricing.inputPerMillion === getLowestPrice('inputPrice');
+              const isLowestOutput = model.pricing.outputPerMillion === getLowestPrice('outputPrice');
 
               return (
                 <tr
-                  key={plan.id}
-                  className={`${plan.isPopular ? 'popular' : ''} ${
-                    isInputLowest || isOutputLowest ? 'lowest-price' : ''
-                  }`}
-                  onClick={() => onSelectPlan?.(plan)}
+                  key={model.id}
+                  onClick={() => onSelectModel?.(model)}
+                  className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
-                  <td className="sticky-col">
-                    <div className="model-info">
-                      <span className="model-name">{plan.name}</span>
-                      <span className="model-id">{plan.model}</span>
-                      {plan.isPopular && <span className="popular-badge">Popular</span>}
-                    </div>
+                  <td className="py-3 px-2 md:px-4">
+                    <div className="font-semibold text-gray-900">{model.name}</div>
+                    <div className="text-xs text-gray-500 md:hidden">{model.provider}</div>
                   </td>
-                  <td>
-                    <span className={`provider-badge provider-${plan.provider.toLowerCase()}`}>
-                      {plan.provider}
+                  <td className="py-3 px-2 md:px-4 hidden md:table-cell">
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
+                      PROVIDER_COLORS[model.provider] || 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {model.provider}
                     </span>
                   </td>
-                  <td>
-                    <span className={`price-value ${isInputLowest ? 'lowest' : ''}`}>
-                      {formatPrice(plan.inputPrice * 1000000, plan.currency)}
+                  <td className="py-3 px-2 md:px-4 text-right">
+                    <span className={`font-mono font-medium ${
+                      isLowestInput ? 'text-green-600 font-bold' : 'text-gray-900'
+                    }`}>
+                      {formatPrice(model.pricing.inputPerMillion)}
+                      {isLowestInput && (
+                        <span className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                          Lowest
+                        </span>
+                      )}
                     </span>
                   </td>
-                  <td>
-                    <span className={`price-value ${isOutputLowest ? 'lowest' : ''}`}>
-                      {formatPrice(plan.outputPrice * 1000000, plan.currency)}
+                  <td className="py-3 px-2 md:px-4 text-right">
+                    <span className={`font-mono font-medium ${
+                      isLowestOutput ? 'text-green-600 font-bold' : 'text-gray-900'
+                    }`}>
+                      {formatPrice(model.pricing.outputPerMillion)}
+                      {isLowestOutput && (
+                        <span className="ml-1 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                          Lowest
+                        </span>
+                      )}
                     </span>
                   </td>
                   {showContextWindow && (
-                    <td>
-                      <span className="context-window">{formatContextWindow(plan.contextWindow)}</span>
-                    </td>
-                  )}
-                  {showFeatures && (
-                    <td>
-                      <div className="features-list">
-                        {plan.features?.map((feature, index) => (
-                          <span key={index} className="feature-tag">
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
+                    <td className="py-3 px-2 md:px-4 text-right text-gray-600 hidden lg:table-cell">
+                      <span className="font-mono">{formatContextLength(model.capabilities.contextLength)}</span>
                     </td>
                   )}
                 </tr>
@@ -287,27 +206,9 @@ export const PricingTable: React.FC<PricingTableProps> = ({
         </table>
       </div>
 
-      {filteredAndSortedPlans.length === 0 && (
-        <div className="no-results">
-          <p>No pricing plans match your criteria.</p>
-          <button
-            onClick={() => {
-              setSearchQuery('');
-              setFilterProvider('all');
-            }}
-            className="reset-button"
-          >
-            Reset Filters
-          </button>
-        </div>
-      )}
-
-      <div className="pricing-table-footer">
-        <p className="disclaimer">
-          * Prices are indicative and may vary. Please check the official provider documentation
-          for the most accurate and up-to-date pricing information.
-        </p>
-      </div>
+      <p className="text-xs text-gray-500 mt-4 px-2 md:px-0">
+        * Prices per million tokens. Scroll horizontally on mobile to see all columns.
+      </p>
     </div>
   );
 };
